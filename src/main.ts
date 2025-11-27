@@ -46,148 +46,265 @@ const superVip = (function () {
         generateElement(container: HTMLElement): Promise<HTMLElement> {
             // 注入 CSS 样式
             GM_addStyle(`
-                #${_CONFIG_.vipBoxId} {cursor:pointer; position:fixed; top:180px; z-index:999999; text-align:center; width: 40px; height: 40px; transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);}
-                #${_CONFIG_.vipBoxId}.snap-right { right:-20px; transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
-                #${_CONFIG_.vipBoxId}.snap-right:hover { right: 0; }
-                #${_CONFIG_.vipBoxId}.snap-left { left:-20px; transition: left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
-                #${_CONFIG_.vipBoxId}.snap-left:hover { left: 0; }
+                /* 基础变量定义 */
+                :root {
+                    --vip-primary-color: #00aaff;
+                    --vip-primary-hover: #33bbff;
+                    --vip-bg-dark: rgba(30, 30, 30, 0.85);
+                    --vip-bg-glass: rgba(40, 40, 40, 0.7);
+                    --vip-border-color: rgba(255, 255, 255, 0.1);
+                    --vip-text-main: #e0e0e0;
+                    --vip-text-sub: #aaaaaa;
+                    --vip-shadow-lg: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+                    --vip-shadow-sm: 0 4px 6px rgba(0,0,0,0.1);
+                    --vip-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                }
 
+                /* VIP 悬浮按钮容器 */
+                #${_CONFIG_.vipBoxId} {
+                    cursor: pointer;
+                    position: fixed;
+                    top: 180px;
+                    z-index: 999999;
+                    text-align: center;
+                    width: 48px;
+                    height: 48px;
+                    transition: var(--vip-transition);
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                }
+
+                /* 贴边吸附效果 */
+                #${_CONFIG_.vipBoxId}.snap-right { right: -24px; }
+                #${_CONFIG_.vipBoxId}.snap-right:hover { right: 10px; }
+                #${_CONFIG_.vipBoxId}.snap-left { left: -24px; }
+                #${_CONFIG_.vipBoxId}.snap-left:hover { left: 10px; }
+
+                /* 拖拽状态 */
                 #${_CONFIG_.vipBoxId}.dragging {
-                    width: 40px;
-                    height: 40px;
+                    transform: scale(1.1);
+                    transition: none;
                 }
-                
-                #${_CONFIG_.vipBoxId}.snap-right.dragging {
-                    width: 60px;
-                    left: auto;
-                    right: auto;
-                }
-                
+                #${_CONFIG_.vipBoxId}.snap-right.dragging,
                 #${_CONFIG_.vipBoxId}.snap-left.dragging {
-                    width: 60px;
+                    width: 48px;
                     left: auto;
                     right: auto;
                 }
 
+                /* VIP 图标按钮 */
                 #${_CONFIG_.vipBoxId} .vip_icon {
-                    width:40px; height:40px; background: #2c2c2c; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-                    display:flex; align-items:center; justify-content:center;
-                    font-size:16px; font-weight:bold; color: #ffc107;
-                    border: 2px solid #444;
-                    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                    width: 48px;
+                    height: 48px;
+                    background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+                    border-radius: 50%;
+                    box-shadow: var(--vip-shadow-sm);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 14px;
+                    font-weight: 800;
+                    color: #ffc107;
+                    border: 1px solid var(--vip-border-color);
+                    transition: var(--vip-transition);
+                    backdrop-filter: blur(4px);
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                /* 按钮微光效果 */
+                #${_CONFIG_.vipBoxId} .vip_icon::after {
+                    content: '';
+                    position: absolute;
+                    top: -50%;
+                    left: -50%;
+                    width: 200%;
+                    height: 200%;
+                    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+                    opacity: 0;
+                    transform: scale(0.5);
+                    transition: var(--vip-transition);
+                }
+
+                #${_CONFIG_.vipBoxId}:hover .vip_icon {
+                    border-color: var(--vip-primary-color);
+                    box-shadow: 0 0 20px rgba(0, 170, 255, 0.4);
+                    transform: scale(1.05);
+                    color: #fff;
+                    background: linear-gradient(135deg, #00aaff 0%, #0077cc 100%);
+                }
+                
+                #${_CONFIG_.vipBoxId}:hover .vip_icon::after {
+                    opacity: 1;
                     transform: scale(1);
                 }
-                
-                /* 拖动时按钮为圆形 */
-                #${_CONFIG_.vipBoxId}.dragging .vip_icon {
-                    border-radius: 20px;  /* 拖动时保持圆形 */
-                }
-                
-                /* 放置在右侧时，按钮变成圆形+右侧长条 */
-                #${_CONFIG_.vipBoxId}.snap-right .vip_icon {
-                    border-radius: 20px 0 0 20px;  /* 右侧吸附时，右侧变成方形 */
-                    width: 60px;  /* 拉长到60px */
-                    position: relative; /* 新增：为了设置left属性 */
-                    left: -20px; /* 新增：修正右侧按钮的偏移，使其可见可点击 */
-                }
-                
-                /* 放置在左侧时，按钮变成左侧长条+圆形 */
-                #${_CONFIG_.vipBoxId}.snap-left .vip_icon {
-                    border-radius: 0 20px 20px 0;  /* 左侧吸附时，左侧变成方形 */
-                    width: 60px;  /* 拉长到60px */
-                }
-                
-                #${_CONFIG_.vipBoxId}:hover .vip_icon {
-                     border-color: #ffc107;
-                     box-shadow: 0 0 15px rgba(255,193,7,0.5);
-                     transform: scale(1.05);
-                }
 
+                /* 贴边时的形状变化 */
+                #${_CONFIG_.vipBoxId}.snap-right .vip_icon { border-radius: 24px 0 0 24px; margin-left: -12px; }
+                #${_CONFIG_.vipBoxId}.snap-left .vip_icon { border-radius: 0 24px 24px 0; margin-right: -12px; }
+                #${_CONFIG_.vipBoxId}:hover .vip_icon { border-radius: 50% !important; margin: 0 !important; }
+
+                /* 解析列表菜单容器 - Glassmorphism */
                 #${_CONFIG_.vipBoxId} .vip_list {
-                    display:none; position:absolute; top: 50%; transform: translateY(-50%) scale(0.95);
-                    text-align:left; background: #2b2b2b; border: 1px solid #444;
-                    border-radius:8px; padding:15px; width:420px; max-height:450px; overflow-y:auto;
-                    box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+                    display: none;
+                    position: absolute;
+                    top: 0;
+                    text-align: left;
+                    background: var(--vip-bg-glass);
+                    backdrop-filter: blur(12px);
+                    -webkit-backdrop-filter: blur(12px);
+                    border: 1px solid var(--vip-border-color);
+                    border-radius: 16px;
+                    padding: 20px;
+                    width: 380px;
+                    max-height: 500px;
+                    overflow-y: auto;
+                    box-shadow: var(--vip-shadow-lg);
                     opacity: 0;
-                    transition: all 0.3s ease-out;
-                    transform-origin: center;
+                    transform: scale(0.9) translateY(-20px);
+                    transform-origin: top right;
+                    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
                 }
+
+                /* 菜单显示状态 */
                 #${_CONFIG_.vipBoxId}.show .vip_list {
-                    display: block; /* BUGFIX: 修复菜单不显示的问题，添加 display:block */
+                    display: block;
                     opacity: 1;
-                    transform: translateY(-50%) scale(1);
+                    transform: scale(1) translateY(0);
                 }
-                #${_CONFIG_.vipBoxId}.snap-right .vip_list { right:85px; }
-                #${_CONFIG_.vipBoxId}.snap-left .vip_list { left:85px; }
-                #${_CONFIG_.vipBoxId} .vip_list h3{
-                    color:#00aaff; font-weight: bold; font-size: 16px; padding-bottom:8px; margin-bottom: 12px;
-                    border-bottom: 1px solid #444; text-shadow: 0 0 4px rgba(0,170,255,0.7);
-                    transition: all 0.3s ease;
+
+                /* 菜单位置 */
+                #${_CONFIG_.vipBoxId}.snap-right .vip_list { right: 60px; top: 0; transform-origin: top right; }
+                #${_CONFIG_.vipBoxId}.snap-left .vip_list { left: 60px; top: 0; transform-origin: top left; }
+
+                /* 标题样式 */
+                #${_CONFIG_.vipBoxId} .vip_list h3 {
+                    color: var(--vip-primary-color);
+                    font-weight: 700;
+                    font-size: 15px;
+                    padding-bottom: 10px;
+                    margin: 0 0 15px 0;
+                    border-bottom: 1px solid var(--vip-border-color);
+                    display: flex;
+                    align-items: center;
+                    letter-spacing: 0.5px;
                 }
-                #${_CONFIG_.vipBoxId} .vip_list ul{
-                    padding-left: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;
+                #${_CONFIG_.vipBoxId} .vip_list h3::before {
+                    content: '';
+                    display: inline-block;
+                    width: 4px;
+                    height: 16px;
+                    background: var(--vip-primary-color);
+                    margin-right: 8px;
+                    border-radius: 2px;
                 }
-                #${_CONFIG_.vipBoxId} .vip_list li{
+
+                /* 列表网格布局 */
+                #${_CONFIG_.vipBoxId} .vip_list ul {
+                    padding: 0;
+                    margin: 0 0 20px 0;
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+                    gap: 10px;
+                }
+
+                /* 列表项样式 */
+                #${_CONFIG_.vipBoxId} .vip_list li {
                     list-style: none;
-                    border-radius:5px; font-size:13px; color:#ddd; text-align:center;
-                    line-height:30px; height: 30px;
-                    background: #3c3c3c;
-                    border:1px solid #555;
-                    padding:0 4px; margin:0;
-                    overflow:hidden;white-space: nowrap;text-overflow: ellipsis;
-                    transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-                    position: relative;
-                    z-index: 1;
-                }
-                #${_CONFIG_.vipBoxId} .vip_list li:hover{
-                    color:#fff; border-color: #00aaff; background: #00aaff;
-                    transform: translateY(-2px) scale(1.05);
-                    box-shadow: 0 5px 15px rgba(0,170,255,0.5);
-                    z-index: 2;
-                }
-                #${_CONFIG_.vipBoxId} li.selected{
-                    color:#fff; border-color: #00aaff; background: #00aaff;
-                    box-shadow: 0 0 15px rgba(0,170,255,0.5);
-                    font-weight: bold;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    color: var(--vip-text-main);
+                    text-align: center;
+                    line-height: 32px;
+                    height: 32px;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid transparent;
+                    padding: 0 8px;
+                    margin: 0;
+                    overflow: hidden;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
+                    transition: all 0.2s ease;
+                    cursor: pointer;
+                    user-select: none;
                 }
 
+                /* 列表项悬停与选中 */
+                #${_CONFIG_.vipBoxId} .vip_list li:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                    color: #fff;
+                }
+                #${_CONFIG_.vipBoxId} li.selected {
+                    background: var(--vip-primary-color);
+                    color: #fff;
+                    box-shadow: 0 4px 12px rgba(0, 170, 255, 0.4);
+                    font-weight: 600;
+                }
+
+                /* 底部信息栏 */
                 #${_CONFIG_.vipBoxId} .vip_list .info-box {
-                    text-align:left;color:#999;font-size:11px;padding:10px;margin-top:15px;
-                    background: #222; border-radius: 5px; border-top: 1px solid #444;
-                    transition: all 0.3s ease;
+                    text-align: left;
+                    color: var(--vip-text-sub);
+                    font-size: 12px;
+                    padding: 12px;
+                    background: rgba(0, 0, 0, 0.2);
+                    border-radius: 8px;
+                    line-height: 1.6;
                 }
-                #${_CONFIG_.vipBoxId} .vip_list .info-box b { color: #00aaff; }
+                #${_CONFIG_.vipBoxId} .vip_list .info-box b { color: var(--vip-primary-color); }
 
+                /* 底部开关栏 */
                 #${_CONFIG_.vipBoxId} .panel-footer {
-                    margin-top: 15px; padding-top: 10px; border-top: 1px solid #444;
-                    display: flex; justify-content: flex-end; align-items: center; color: #ccc; font-size: 14px;
-                    transition: all 0.3s ease;
+                    margin-top: 15px;
+                    padding-top: 15px;
+                    border-top: 1px solid var(--vip-border-color);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    color: var(--vip-text-main);
+                    font-size: 13px;
                 }
-                #${_CONFIG_.vipBoxId} .toggle-switch {
-                    width: 40px; height: 22px; background: #555; border-radius: 11px; margin-left: 10px;
-                    position: relative; cursor: pointer; transition: background 0.3s ease;
-                    box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
-                }
-                #${_CONFIG_.vipBoxId} .toggle-switch.on { background: #00aaff; }
-                #${_CONFIG_.vipBoxId} .toggle-handle {
-                    width: 18px; height: 18px; background: #fff; border-radius: 50%;
-                    position: absolute; top: 2px; left: 2px;
-                    transition: left 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                }
-                #${_CONFIG_.vipBoxId} .toggle-switch.on .toggle-handle { left: 20px; }
 
-                #${_CONFIG_.vipBoxId} .vip_list::-webkit-scrollbar{width:5px; height:1px;}
-                #${_CONFIG_.vipBoxId} .vip_list::-webkit-scrollbar-thumb{box-shadow:inset 0 0 5px rgba(0, 0, 0, 0.2); background:#666; border-radius: 5px; transition: all 0.3s ease;}
-                #${_CONFIG_.vipBoxId} .vip_list::-webkit-scrollbar-track{box-shadow:inset 0 0 5px rgba(0, 0, 0, 0.2); background:#333; border-radius: 5px;}
-				`);
+                /* 开关控件 */
+                #${_CONFIG_.vipBoxId} .toggle-switch {
+                    width: 44px;
+                    height: 24px;
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 12px;
+                    position: relative;
+                    cursor: pointer;
+                    transition: background 0.3s ease;
+                }
+                #${_CONFIG_.vipBoxId} .toggle-switch.on { background: var(--vip-primary-color); }
+                #${_CONFIG_.vipBoxId} .toggle-handle {
+                    width: 20px;
+                    height: 20px;
+                    background: #fff;
+                    border-radius: 50%;
+                    position: absolute;
+                    top: 2px;
+                    left: 2px;
+                    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                }
+                #${_CONFIG_.vipBoxId} .toggle-switch.on .toggle-handle { left: 22px; }
+
+                /* 滚动条美化 */
+                #${_CONFIG_.vipBoxId} .vip_list::-webkit-scrollbar { width: 4px; }
+                #${_CONFIG_.vipBoxId} .vip_list::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 2px;
+                }
+                #${_CONFIG_.vipBoxId} .vip_list::-webkit-scrollbar-track { background: transparent; }
+            `);
 
             // 针对移动端优化样式
             if (_CONFIG_.isMobile) {
                 GM_addStyle(`
-                    #${_CONFIG_.vipBoxId} {top:300px;}
-                    #${_CONFIG_.vipBoxId} .vip_list {width:300px;}
-                    `);
+                    #${_CONFIG_.vipBoxId} { top: 300px; }
+                    #${_CONFIG_.vipBoxId} .vip_list { width: 300px; max-height: 60vh; }
+                `);
             }
 
             // 根据解析源类型，生成不同的列表项
@@ -212,35 +329,28 @@ const superVip = (function () {
             // 注入 HTML
             $(container).append(`
                 <div id="${_CONFIG_.vipBoxId}">
-                    <div class="vip_icon" title="选择解析源">VIP</div>
+                    <div class="vip_icon" title="点击展开解析列表">VIP</div>
                     <div class="vip_list">
                         <div>
-                            <h3>[内嵌播放]</h3>
-                            <ul>
-                                ${type_1_str}
-                            </ul>
+                            <h3>内嵌播放</h3>
+                            <ul>${type_1_str}</ul>
                         </div>
                         <div>
-                            <h3>[弹窗播放带选集]</h3>
-                            <ul>
-                                ${type_2_str}
-                            </ul>
+                            <h3>弹窗播放 (带选集)</h3>
+                            <ul>${type_2_str}</ul>
                         </div>
                         <div>
-                            <h3>[弹窗播放不带选集]</h3>
-                            <ul>
-                                ${type_3_str}
-                            </ul>
+                            <h3>弹窗播放 (纯净)</h3>
+                            <ul>${type_3_str}</ul>
                         </div>
                         <div class="info-box">
-                            <b>自动解析功能说明：</b>
-                            <br>&nbsp;&nbsp;1、自动解析功能默认关闭（自动解析只支持内嵌播放源）
-                            <br>&nbsp;&nbsp;2、开启自动解析，网页打开后脚本将根据当前选中的解析源自动解析视频。如解析失败，请手动选择不同的解析源尝试
-                            <br>&nbsp;&nbsp;3、没有选中解析源将随机选取一个
-                            <br>&nbsp;&nbsp;4、如某些网站有会员可以关闭自动解析功能
+                            <b>功能说明：</b>
+                            <br>1. 自动解析仅支持内嵌播放源。
+                            <br>2. 解析失败请尝试切换其他线路。
+                            <br>3. 若网站已有会员，建议关闭自动解析。
                         </div>
                         <div class="panel-footer">
-                            <span>自动解析</span>
+                            <span>自动解析当前线路</span>
                             <div class="toggle-switch ${isAutoPlayOn ? 'on' : ''}" id="vip_auto_toggle">
                                 <div class="toggle-handle"></div>
                             </div>
@@ -254,7 +364,7 @@ const superVip = (function () {
             const vipBox = $(`#${_CONFIG_.vipBoxId}`);
 
             if (savedTop !== null) {
-                vipBox.css({top: savedTop + 'px'});
+                vipBox.css({ top: savedTop + 'px' });
             }
             vipBox.addClass(savedSide === 'left' ? 'snap-left' : 'snap-right');
 
@@ -271,7 +381,7 @@ const superVip = (function () {
 
             // VIP 图标点击事件，用于展开/收起解析列表
             vipBox.find(".vip_icon").on("click", (e) => {
-                if(wasDragged) {
+                if (wasDragged) {
                     e.stopPropagation();
                     return;
                 }
@@ -296,6 +406,9 @@ const superVip = (function () {
                     _this.showPlayerWindow(_CONFIG_.videoParseList[index]);
                     vipBox.find(".vip_list li").removeClass("selected");
                     $(item).addClass("selected");
+                    // 添加点击反馈动画
+                    $(item).css('transform', 'scale(0.95)');
+                    setTimeout(() => $(item).css('transform', ''), 150);
                 });
             });
             // 弹窗播放列表项点击事件
@@ -304,34 +417,26 @@ const superVip = (function () {
                     const index = parseInt($(item).attr("data-index") as string);
                     const videoObj = _CONFIG_.videoParseList[index];
                     let url = videoObj.url + window.location.href;
-                    GM_openInTab(url, {active: true, insert: true, setParent: true});
+                    GM_openInTab(url, { active: true, insert: true, setParent: true });
                 });
             });
 
-            // 悬浮按钮拖拽事件 - 重构以修复点击/拖拽冲突
+            // 悬浮按钮拖拽事件
             vipBox.on('mousedown', function (e) {
-                if (e.which !== 1) { // 只响应左键
-                    return;
-                }
+                if (e.which !== 1) return; // 只响应左键
                 e.preventDefault();
                 wasDragged = false;
 
                 const startX = e.pageX;
                 const startY = e.pageY;
 
-                // 动态获取尺寸和位置，确保在拖动开始时才计算
                 let initialOffset: JQuery.Coordinates, windowWidth: number, windowHeight: number, boxWidth: number, boxHeight: number;
                 let currentX: number, currentY: number;
                 let maxX: number, maxY: number;
 
-                // 高性能鼠标移动处理
                 function onMouseMove(e: JQuery.MouseMoveEvent) {
-                    // 步骤1：检查拖动是否已开始（移动超过5像素）
                     if (!wasDragged && (Math.abs(e.pageX - startX) > 5 || Math.abs(e.pageY - startY) > 5)) {
                         wasDragged = true;
-
-                        // 步骤2：拖动正式开始，现在才进行视觉设置
-                        // 初始化拖动所需变量
                         initialOffset = vipBox.offset() as JQuery.Coordinates;
                         windowWidth = $(window).width() as number;
                         windowHeight = $(window).height() as number;
@@ -342,20 +447,15 @@ const superVip = (function () {
                         maxX = windowWidth - boxWidth;
                         maxY = windowHeight - boxHeight;
 
-                        // 应用拖动样式
-                        $('body').css('user-select', 'none'); // 拖拽时禁止选中文本
-                        vipBox.css("cursor", "move");
-                        vipBox.css("position", "absolute"); // 切换到绝对定位进行流畅拖动
+                        $('body').css('user-select', 'none');
+                        vipBox.css("cursor", "grabbing");
+                        vipBox.css("position", "absolute");
                         vipBox.addClass("dragging");
-                        vipBox.removeClass("snap-left snap-right"); // 移除贴边类
+                        vipBox.removeClass("snap-left snap-right show"); // 拖拽时隐藏菜单
                     }
 
-                    // 如果没有开始拖动，则不执行任何操作
-                    if (!wasDragged) {
-                        return;
-                    }
+                    if (!wasDragged) return;
 
-                    // 步骤3：计算新位置并更新
                     const newX = Math.max(0, Math.min(maxX, e.pageX - (boxWidth / 2)));
                     const newY = Math.max(0, Math.min(maxY, e.pageY - (boxHeight / 2)));
 
@@ -368,28 +468,26 @@ const superVip = (function () {
                     currentY = newY;
                 }
 
-                // 鼠标释放处理
                 function onMouseUp(e: JQuery.MouseUpEvent) {
-                    // 移除事件监听器
                     $(document).off('mousemove', onMouseMove);
                     $(document).off('mouseup', onMouseUp);
 
-                    // 步骤4：检查是否真的发生了拖动
                     if (wasDragged) {
-                        // 是拖动，则进行清理和贴边
-                        $('body').css('user-select', ''); // 恢复文本选中
+                        $('body').css('user-select', '');
                         vipBox.css("cursor", "pointer");
                         vipBox.removeClass("dragging");
 
-                        // 保存最终的Y坐标
                         GM_setValue("vip_button_pos_top", currentY);
 
-                        // 延迟以确保平滑过渡
-                        setTimeout(() => {
-                            vipBox.css("left", ""); // 清除内联left
-                            vipBox.css("position", "fixed"); // 恢复固定定位
+                        // 贴边动画
+                        vipBox.css({
+                            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                        });
 
-                            // 决定贴靠哪一边
+                        setTimeout(() => {
+                            vipBox.css("left", "");
+                            vipBox.css("position", "fixed");
+
                             if (currentX + boxWidth / 2 > windowWidth / 2) {
                                 GM_setValue("vip_button_side", "right");
                                 vipBox.addClass("snap-right");
@@ -397,13 +495,15 @@ const superVip = (function () {
                                 GM_setValue("vip_button_side", "left");
                                 vipBox.addClass("snap-left");
                             }
+
+                            // 恢复 transition
+                            setTimeout(() => {
+                                vipBox.css('transition', '');
+                            }, 400);
                         }, 50);
                     }
-                    // 如果不是拖动（即单击），则不执行任何操作。
-                    // 这样可以防止干扰正常的 'click' 事件。
                 }
 
-                // 注册事件监听器
                 $(document).on('mousemove', onMouseMove);
                 $(document).on('mouseup', onMouseUp);
             });
@@ -507,7 +607,7 @@ const superVip = (function () {
             }
         }
     }
-    
+
     /**
      * 默认的消费者实现，继承自 BaseConsumer。
      * 未来可以为特定网站扩展不同的 Consumer。
